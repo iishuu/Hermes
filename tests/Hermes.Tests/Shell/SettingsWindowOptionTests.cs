@@ -1,4 +1,4 @@
-using System.IO;
+﻿using System.IO;
 using Hermes.Windows.Shell;
 
 namespace Hermes.Tests.Shell;
@@ -30,6 +30,7 @@ public static class SettingsWindowOptionTests
         suite.Add("settings window uses manual model input and editable prompt", WindowUsesManualModelInputAndEditablePrompt);
         suite.Add("settings window includes explanation preference editor", WindowIncludesExplanationPreferenceEditor);
         suite.Add("settings window uses dual translation channels", WindowUsesDualTranslationChannels);
+        suite.Add("settings window includes ai actions page", WindowIncludesAIActionPage);
         suite.Add("settings window uses close only title action and aligned api test button", WindowUsesCloseOnlyTitleActionAndAlignedApiTestButton);
         suite.Add("settings window keeps action buttons visible in light theme", WindowKeepsActionButtonsVisibleInLightTheme);
         suite.Add("settings window includes floating button style selector", WindowIncludesFloatingButtonStyleSelector);
@@ -342,6 +343,27 @@ public static class SettingsWindowOptionTests
         TestAssert.True(code.Contains("UpdateApiHintText()", StringComparison.Ordinal));
     }
 
+    private static void WindowIncludesAIActionPage()
+    {
+        var xaml = File.ReadAllText(FindRepoFile("src/Hermes.Windows/Shell/SettingsWindow.xaml"));
+        var code = File.ReadAllText(FindRepoFile("src/Hermes.Windows/Shell/SettingsWindow.xaml.cs"));
+
+        TestAssert.True(xaml.Contains("Header=\"AI 小工具\"", StringComparison.Ordinal));
+        TestAssert.True(xaml.Contains("x:Name=\"OpenAIActionSettingsButton\"", StringComparison.Ordinal));
+        TestAssert.True(xaml.Contains("x:Name=\"OpenAIActionConfigDirectoryButton\"", StringComparison.Ordinal));
+        TestAssert.True(xaml.Contains("Click=\"OpenAIActionSettings_Click\"", StringComparison.Ordinal));
+        TestAssert.True(xaml.Contains("Click=\"OpenAIActionConfigDirectory_Click\"", StringComparison.Ordinal));
+        TestAssert.True(xaml.Contains("打开配置目录", StringComparison.Ordinal));
+        TestAssert.True(xaml.Contains("管理小工具", StringComparison.Ordinal));
+        TestAssert.True(xaml.Contains("AI 小工具", StringComparison.Ordinal));
+        TestAssert.True(xaml.Contains("提示词变量", StringComparison.Ordinal));
+        TestAssert.True(xaml.Contains("选择 .txt / .md 文件后保存原文件路径", StringComparison.Ordinal));
+        TestAssert.False(xaml.Contains("AI Action Framework", StringComparison.Ordinal));
+        TestAssert.True(xaml.Contains("%LOCALAPPDATA%\\Hermes\\AIAction\\", StringComparison.Ordinal));
+        TestAssert.True(code.Contains("_aiActionSettingsRequested?.Invoke();", StringComparison.Ordinal));
+        TestAssert.True(code.Contains("AIActionPaths.RootDirectory", StringComparison.Ordinal));
+        TestAssert.True(code.Contains("UseShellExecute = true", StringComparison.Ordinal));
+    }
     private static void WindowUsesCloseOnlyTitleActionAndAlignedApiTestButton()
     {
         var xaml = File.ReadAllText(FindRepoFile("src/Hermes.Windows/Shell/SettingsWindow.xaml"));
@@ -557,3 +579,7 @@ public static class SettingsWindowOptionTests
         return count;
     }
 }
+
+
+
+

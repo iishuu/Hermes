@@ -1,4 +1,4 @@
-<Window x:Class="Hermes.Windows.Shell.SettingsWindow"
+﻿<Window x:Class="Hermes.Windows.Shell.SettingsWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="Hermes 设置"
@@ -1622,6 +1622,101 @@
                         </ScrollViewer>
                     </TabItem>
 
+                    <TabItem Header="AI 小工具">
+                        <ScrollViewer VerticalScrollBarVisibility="Auto">
+                            <StackPanel Margin="24,18,24,10">
+                                <Border Style="{StaticResource Settings.GroupCard}">
+                                    <StackPanel>
+                                        <DockPanel Margin="0,0,0,12">
+                                            <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
+                                                <Button x:Name="OpenAIActionConfigDirectoryButton"
+                                                        Style="{StaticResource Settings.GhostIconButton}"
+                                                        MinWidth="128"
+                                                        Click="OpenAIActionConfigDirectory_Click">
+                                                    <TextBlock Text="打开配置目录"/>
+                                                </Button>
+                                                <Button x:Name="OpenAIActionSettingsButton"
+                                                        Style="{StaticResource Settings.GhostIconButton}"
+                                                        MinWidth="128"
+                                                        Margin="8,0,0,0"
+                                                        Click="OpenAIActionSettings_Click">
+                                                    <TextBlock Text="管理小工具"/>
+                                                </Button>
+                                            </StackPanel>
+                                            <StackPanel>
+                                                <TextBlock Text="AI 小工具" Style="{StaticResource Settings.CardTitle}"/>
+                                                <TextBlock Text="配置可复用的小工具：名称、快捷键、提示词模板和输入文件。它和内置翻译功能互相独立。"
+                                                           Style="{StaticResource Settings.Helper}"
+                                                           Margin="0,4,18,0"/>
+                                            </StackPanel>
+                                        </DockPanel>
+
+                                        <Border Style="{StaticResource Settings.Row}" Margin="0,8,0,0">
+                                            <Grid>
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="170"/>
+                                                    <ColumnDefinition Width="*"/>
+                                                </Grid.ColumnDefinitions>
+                                                <TextBlock Grid.Column="0" Text="配置目录" Style="{StaticResource Settings.Label}"/>
+                                                <TextBlock Grid.Column="1"
+                                                           Text="%LOCALAPPDATA%\Hermes\AIAction\"
+                                                           Foreground="{DynamicResource Settings.TextMutedBrush}"
+                                                           FontFamily="Consolas"
+                                                           FontSize="12"
+                                                           TextWrapping="Wrap"
+                                                           VerticalAlignment="Center"/>
+                                            </Grid>
+                                        </Border>
+
+                                        <Border Style="{StaticResource Settings.Row}">
+                                            <Grid>
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="170"/>
+                                                    <ColumnDefinition Width="*"/>
+                                                </Grid.ColumnDefinitions>
+                                                <TextBlock Grid.Column="0" Text="全局模型配置" Style="{StaticResource Settings.Label}"/>
+                                                <TextBlock Grid.Column="1"
+                                                           Text="接口地址、密钥、模型和温度在小工具管理器中统一配置；密钥使用 Windows DPAPI 单独加密保存。"
+                                                           Style="{StaticResource Settings.Helper}"
+                                                           VerticalAlignment="Center"/>
+                                            </Grid>
+                                        </Border>
+
+                                        <Border Style="{StaticResource Settings.Row}">
+                                            <Grid>
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="170"/>
+                                                    <ColumnDefinition Width="*"/>
+                                                </Grid.ColumnDefinitions>
+                                                <TextBlock Grid.Column="0" Text="提示词变量" Style="{StaticResource Settings.Label}"/>
+                                                <WrapPanel Grid.Column="1" VerticalAlignment="Center">
+                                                    <TextBlock Text="$text$" Foreground="{DynamicResource Settings.AccentBrush}" FontWeight="Medium" Margin="0,0,12,0"/>
+                                                    <TextBlock Text="$clipboard$" Foreground="{DynamicResource Settings.AccentBrush}" FontWeight="Medium" Margin="0,0,12,0"/>
+                                                    <TextBlock Text="$file_input$" Foreground="{DynamicResource Settings.AccentBrush}" FontWeight="Medium" Margin="0,0,12,0"/>
+                                                    <TextBlock Text="$file_append$" Foreground="{DynamicResource Settings.AccentBrush}" FontWeight="Medium" Margin="0,0,12,0"/>
+                                                    <TextBlock Text="$file_overwrite$" Foreground="{DynamicResource Settings.AccentBrush}" FontWeight="Medium"/>
+                                                </WrapPanel>
+                                            </Grid>
+                                        </Border>
+
+                                        <Border Style="{StaticResource Settings.Row}" BorderThickness="0">
+                                            <Grid>
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="170"/>
+                                                    <ColumnDefinition Width="*"/>
+                                                </Grid.ColumnDefinitions>
+                                                <TextBlock Grid.Column="0" Text="文件写回" Style="{StaticResource Settings.Label}"/>
+                                                <TextBlock Grid.Column="1"
+                                                           Text="选择 .txt / .md 文件后保存原文件路径；$file_append$ 会追加到原文件，$file_overwrite$ 会直接覆盖原文件，写回前不弹确认框。"
+                                                           Style="{StaticResource Settings.Helper}"
+                                                           VerticalAlignment="Center"/>
+                                            </Grid>
+                                        </Border>
+                                    </StackPanel>
+                                </Border>
+                            </StackPanel>
+                        </ScrollViewer>
+                    </TabItem>
                     <TabItem Header="高级">
                         <ScrollViewer VerticalScrollBarVisibility="Auto">
                             <StackPanel Margin="24,18,24,10">
@@ -1778,4 +1873,7 @@
         </Border>
     </Border>
 </Window>
+
+
+
 

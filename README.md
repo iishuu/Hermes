@@ -1,4 +1,4 @@
-# Hermes
+﻿# Hermes
 
 Hermes 是一个 Windows 全局 AI 划词翻译助手。选中英文内容后，按快捷键或点击悬浮按钮，就能把结果以轻量浮窗的形式翻译成简体中文。
 
@@ -20,11 +20,13 @@ Hermes 是一个 Windows 全局 AI 划词翻译助手。选中英文内容后，
 - 翻译结果以悬浮卡片显示，支持复制、重新翻译、固定、关闭和拖动。
 - 翻译卡片和设置窗口支持从边缘/四角调整大小并自动记忆；悬浮按钮图标大小和浮窗字号都可在外观页通过五点横向控件选择，图标预览会随浅色/深色主题切换且保持透明背景。
 - 默认使用腾讯 Transmart 翻译；可切换 OpenAI / OpenAI-compatible。
+- 设置窗口新增 `AI 小工具` 页签，页签说明已改为中文，并提供“打开配置目录”按钮；托盘右键菜单也提供 AI 小工具快捷入口；可配置 DeepSeek/OpenAI-compatible 快捷操作、提示词模板、绑定输入文件和独立快捷键。AI Action 默认模型为 `deepseek-v4-flash`，Action 快捷键和选择文件快捷键都通过点击录制；选择输入文件时保存源文件绝对路径，不再复制到 Context 目录或生成 `-1` 副本，文件写回前不再弹确认框；AI Action 独立 Key 为空时会复用 Hermes 已保存 API Key，但仍走 AI Action 自己的 Base URL / Model / Prompt 执行链路。
 - OpenAI 模式支持 Responses API 流式输出，译文会边生成边显示。
 - 支持 OpenAI-compatible Base URL 和自定义模型名。
 - API Key 使用 Windows DPAPI 加密保存在本机。
 - 支持浅色、深色和跟随系统主题。
 - 默认不保存翻译历史，隐私优先。
+
 
 ## 下载和运行
 
@@ -53,8 +55,9 @@ artifacts\publish\Hermes.Windows\manual-test\win-x64-self-contained\
 1. 启动 `Hermes.Windows.exe`。
 2. 在系统托盘中打开 Hermes 设置。
 3. 默认 Provider 为 Transmart，可直接使用；如需 OpenAI 再填写 API Key / Base URL / Model。
-4. 选中一段英文文本，按 `Ctrl+Alt+E` 翻译。
-5. 或先按住 `Ctrl`，再划选英文文本，松开鼠标/键盘后点击出现的悬浮翻译图标。
+4. 如需 AI 小工具，在设置窗口打开 `AI 小工具` 页签，或右键托盘图标打开 `AI Actions`，配置 DeepSeek API、Action 名称、点击录制快捷键、提示词和输入文件；`Choose File Hotkey` 可全局打开文件选择，选择后直接保存源文件路径。
+5. 选中一段英文文本，按 `Ctrl+Alt+E` 翻译。
+6. 或先按住 `Ctrl`，再划选英文文本，松开鼠标/键盘后点击出现的悬浮翻译图标。
 6. 先按住 `Alt`，再划选术语，松开鼠标/键盘后点击悬浮按钮查看解释。
 
 默认 Base URL：
@@ -84,7 +87,7 @@ Windows 上不同应用暴露选区的方式并不一致，所以 Hermes 采用�
 ## 隐私说明
 
 - 只有用户主动按快捷键、点击悬浮按钮或选择翻译剪贴板时，Hermes 才会发送文本。
-- API Key 不写入 `settings.json`，而是使用 Windows DPAPI 加密保存。
+- API Key 不写入 `settings.json`，而是使用 Windows DPAPI 加密保存；AI Action 的 API Key 独立保存到 `%LOCALAPPDATA%\Hermes\AIAction\ai_key.dat`。
 - 翻译历史默认关闭。
 - 日志默认不记录完整原文和译文，也会脱敏 API Key 形态的内容。
 - 可在设置中维护排除应用和敏感应用列表。
@@ -138,6 +141,7 @@ artifacts\release\v0.2.3\
 - `Design.md`：项目结构、核心流程、模块职责、打包策略和变更记录。
 - `docs/release-notes/`：GitHub Release 文案草稿。
 - `docs/prompts/`：README 头图等视觉素材提示词。
+- `docs/iishuu-ai-small-tool.md`: ai小工具使用说明
 
 ## Provider Notes (2026-05-29)
 
@@ -149,3 +153,41 @@ artifacts\release\v0.2.3\
 - Popup loading text now exposes the active channel at runtime and keeps that channel visible during streaming or long-running states:
   - `正在翻译 (Tencent)...` for Transmart translation.
   - `正在翻译 (<OpenAI model>)...` for OpenAI translation.
+
+
+## Fork Notice
+
+This repository is a fork of:
+
+https://github.com/KiRinXC/Hermes
+
+This fork adds custom AI tools and related extensions while keeping the original Hermes translation functionality unchanged.
+
+
+## Build
+
+Requirements:
+
+- Visual Studio 2022
+- .NET SDK 10.0.300
+
+
+A release build script is provided:
+
+`build_release.bat`
+
+
+The script will:
+
+1. Clean previous release output.
+2. Restore dependencies.
+3. Build the project in Release mode.
+4. Publish output to: `release\`  
+The generated files in `release\` can be used as the standalone build output.
+
+
+
+
+
+
+
