@@ -1,4 +1,5 @@
 ﻿using System.Net.Http;
+using Hermes.Windows.AIAction;
 using System.Windows;
 using Hermes.Windows.History;
 using Hermes.Windows.Infrastructure;
@@ -33,6 +34,12 @@ public partial class App : System.Windows.Application
     private ITranslationService? _translationService;
     private TriggerDiagnosticsService? _triggerDiagnosticsService;
     private SettingsWindow? _settingsWindow;
+    private AIActionSettingsWindow? _aiActionSettingsWindow;
+    private AIActionConfigService? _aiActionConfigService;
+    private AIActionSecretStorageService? _aiActionSecretStorage;
+    private ContextFileService? _aiActionContextFileService;
+    private AIActionHotkeyManager? _aiActionHotkeyManager;
+    private AIActionExecutor? _aiActionExecutor;
     private bool _paused;
 
     protected override async void OnStartup(StartupEventArgs e)
@@ -62,6 +69,7 @@ public partial class App : System.Windows.Application
     {
         _translationCoordinator?.CloseAll();
         _hotkeyService?.Dispose();
+        _aiActionHotkeyManager?.Dispose();
         _keyboardHookService?.Dispose();
         _mouseHookService?.Dispose();
         _trayService?.Dispose();
@@ -112,6 +120,37 @@ public partial class App : System.Windows.Application
             _historyService,
             _settingsService);
         _translationCoordinator.SettingsRequested += (_, _) => ShowSettingsWindow();
+
+        _aiActionConfigService = new AIActionConfigService(_logger);
+        await _aiActionConfigService.LoadAsync();
+        _aiActionSecretStorage = new AIActionSecretStorageService(_logger);
+        _aiActionContextFileService = new ContextFileService();
+        var aiActionWriteService = new ContextWriteService();
+        var aiActionProvider = new DeepSeekProvider(new HttpClient(), _aiActionConfigService, _aiActionSecretStorage, _logger, _secretStorage);
+        _aiActionExecutor = new AIActionExecutor(
+            selectionOrchestrator,
+            _overlayManager,
+            _aiActionConfigService,
+            aiActionProvider,
+            new PromptTemplateResolver(),
+            _aiActionContextFileService,
+            aiActionWriteService,
+            _logger);
+        _aiActionHotkeyManager = new AIActionHotkeyManager(_aiActionConfigService, _logger);
+        _aiActionHotkeyManager.ActionHotkeyPressed += (_, action) =>
+        {
+            if (!_paused && _aiActionExecutor is not null)
+            {
+                _ = Dispatcher.InvokeAsync(async () => await _aiActionExecutor.ExecuteAsync(action));
+            }
+        };
+        _aiActionHotkeyManager.ChooseFileHotkeyPressed += (_, _) =>
+        {
+            if (!_paused)
+            {
+                _ = Dispatcher.InvokeAsync(() => ShowAIActionSettingsWindow(chooseFile: true));
+            }
+        };
 
         _hotkeyService = new HotkeyService(_logger);
         _hotkeyService.HotkeyPressed += async (_, _) =>
@@ -167,6 +206,7 @@ public partial class App : System.Windows.Application
             }
         };
         _trayService.SettingsRequested += (_, _) => ShowSettingsWindow();
+        _trayService.AIActionSettingsRequested += (_, _) => ShowAIActionSettingsWindow();
         _trayService.ExitRequested += (_, _) => Shutdown();
         _trayService.Show();
 
@@ -225,6 +265,7 @@ public partial class App : System.Windows.Application
     {
         _paused = true;
         _hotkeyService?.Unregister();
+        _aiActionHotkeyManager?.Stop();
         _keyboardHookService?.Stop();
         _mouseHookService?.Stop();
         _translationCoordinator?.ClosePassiveUi();
@@ -240,6 +281,7 @@ public partial class App : System.Windows.Application
 
         _paused = false;
         _hotkeyService?.Register(HotkeyGesture.ParseOrDefault(_settingsService.Current.Triggers.Hotkey));
+        _aiActionHotkeyManager?.Start();
         _keyboardHookService?.Start();
         if (_settingsService.Current.Triggers.AutoShowSelectionButton)
         {
@@ -271,11 +313,49 @@ public partial class App : System.Windows.Application
                 _startupRegistrationService,
                 _historyService,
                 _triggerDiagnosticsService,
-                _logger);
+                _logger,
+                () => ShowAIActionSettingsWindow());
             _settingsWindow.Closed += (_, _) => _settingsWindow = null;
         }
 
         BringSettingsWindowToFront();
+    }
+
+    private void ShowAIActionSettingsWindow(bool chooseFile = false)
+    {
+        if (_aiActionConfigService is null || _aiActionSecretStorage is null || _aiActionContextFileService is null)
+        {
+            return;
+        }
+
+        if (_aiActionSettingsWindow is null || !_aiActionSettingsWindow.IsVisible)
+        {
+            _aiActionSettingsWindow = new AIActionSettingsWindow(
+                _aiActionConfigService,
+                _aiActionSecretStorage,
+                _aiActionContextFileService);
+            if (_settingsWindow is { IsVisible: true })
+            {
+                _aiActionSettingsWindow.Owner = _settingsWindow;
+            }
+
+            _aiActionSettingsWindow.Closed += (_, _) => _aiActionSettingsWindow = null;
+        }
+
+        if (!_aiActionSettingsWindow.IsVisible)
+        {
+            _aiActionSettingsWindow.Show();
+        }
+
+        _aiActionSettingsWindow.Topmost = true;
+        _aiActionSettingsWindow.Activate();
+        _aiActionSettingsWindow.Focus();
+        _aiActionSettingsWindow.Topmost = false;
+
+        if (chooseFile)
+        {
+            _ = Dispatcher.InvokeAsync(async () => await _aiActionSettingsWindow.ChooseInputFileFromHotkeyAsync());
+        }
     }
 
     private void BringSettingsWindowToFront()
@@ -301,3 +381,9 @@ public partial class App : System.Windows.Application
         _settingsWindow.Topmost = false;
     }
 }
+
+
+
+
+
+

@@ -26,6 +26,8 @@ public sealed class TrayService : IDisposable
 
     public event EventHandler? SettingsRequested;
 
+    public event EventHandler? AIActionSettingsRequested;
+
     public event EventHandler? ExitRequested;
 
     public void Show()
@@ -79,6 +81,7 @@ public sealed class TrayService : IDisposable
             _menuWindow.PauseResumeRequested += (_, _) => PauseResumeRequested?.Invoke(this, EventArgs.Empty);
             _menuWindow.TranslateClipboardRequested += (_, _) => TranslateClipboardRequested?.Invoke(this, EventArgs.Empty);
             _menuWindow.SettingsRequested += (_, _) => SettingsRequested?.Invoke(this, EventArgs.Empty);
+            _menuWindow.AIActionSettingsRequested += (_, _) => AIActionSettingsRequested?.Invoke(this, EventArgs.Empty);
             _menuWindow.ExitRequested += (_, _) => ExitRequested?.Invoke(this, EventArgs.Empty);
             _menuWindow.Closed += (_, _) => _menuWindow = null;
             _menuWindow.Show();
@@ -92,3 +95,4 @@ public sealed class TrayService : IDisposable
         return streamInfo is null ? SystemIcons.Application : new Icon(streamInfo.Stream);
     }
 }
+

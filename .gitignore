@@ -11,6 +11,7 @@ coverage/
 *.coverage
 *.coveragexml
 *.trx
+Release/
 
 # Local .NET / NuGet environment
 .dotnet-home/

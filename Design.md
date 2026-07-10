@@ -1,4 +1,4 @@
-# Hermes 项目设计文档
+﻿# Hermes 项目设计文档
 
 本文件记录 Hermes 当前怎么做、为什么这样做，以及后续功能变化需要同步更新的位置。它面向项目维护和回顾，不替代 README 的项目入口说明，也不替代 OpenSpec 的变更提案。
 
@@ -34,6 +34,7 @@ Hermes
 │     ├─ Selection/
 │     ├─ Overlay/
 │     ├─ Translation/
+│     ├─ AIAction/
 │     ├─ Settings/
 │     ├─ History/
 │     ├─ Infrastructure/
@@ -56,7 +57,8 @@ Hermes
 - 启用单实例守卫，重复启动时激活已有实例。
 - 加载设置并应用主题。
 - 初始化 DPAPI 密钥存储、日志、历史、翻译服务、选区服务、悬浮层服务。
-- 注册托盘菜单，并在启动通知显示后延迟注册全局快捷键、键盘 hook 和鼠标 hook，降低应用刚启动时 UI 线程忙碌造成的鼠标卡顿。
+- 初始化 AI Action 配置、独立 DPAPI 密钥存储、DeepSeek/OpenAI-compatible 调用器、Action 执行器和动态快捷键管理器。
+- 注册托盘菜单，并在启动通知显示后延迟注册全局快捷键、AI Action 快捷键、键盘 hook 和鼠标 hook，降低应用刚启动时 UI 线程忙碌造成的鼠标卡顿。
 - 根据暂停状态和设置控制触发器启动或停止。
 
 当前服务之间以构造函数直接组装为主，没有引入依赖注入容器。这个选择符合 MVP 体量，后续如果服务数量继续增长，可以再评估是否引入轻量 DI。
@@ -123,11 +125,31 @@ ClipboardSelectionProvider 读取当前剪贴板文本
 
 这是 UI Automation 和选区识别失败时的兜底路径。
 
+### AI Action 快捷操作
+
+```text
+用户按下某个 Action 的全局快捷键
+  ↓
+AIActionHotkeyManager 根据 actions.json 匹配 Action
+  ↓
+AIActionExecutor 读取当前选区、剪贴板和绑定源文件
+  ↓
+PromptTemplateResolver 解析 $text$ / $clipboard$ / $file_input$，并剥离 $file_append$ / $file_overwrite$ 控制变量
+  ↓
+DeepSeekProvider 调用 OpenAI-compatible chat/completions
+  ↓
+TranslationPopupWindow 复用悬浮卡片显示结果
+  ↓
+ContextWriteService 按控制变量追加或覆盖绑定源文件
+```
+
+AI Action 与原翻译功能独立：翻译快捷键、划词按钮和 Transmart/OpenAI 翻译路由保持不变；AI Action 使用独立配置目录 `%LOCALAPPDATA%\Hermes\AIAction\`，并通过托盘菜单的 `AI Actions` 入口管理。
+
 ## 模块说明
 
 ### Shell
 
-`Shell/SettingsWindow` 是设置入口，负责 API、翻译、触发、UI、隐私、开机启动等配置的展示和保存。设置窗口由托盘菜单或翻译卡片中的设置动作打开。
+`Shell/SettingsWindow` 是翻译设置入口，负责 API、翻译、触发、UI、隐私、开机启动等配置的展示和保存。设置窗口由托盘菜单或翻译卡片中的设置动作打开。设置窗口内新增 `AI 小工具` 页签，以中文展示配置目录、全局模型配置、提示词变量和文件写回规则，并提供“打开配置目录”和进入完整管理器的动作。`Shell/AIActionSettingsWindow` 是 AI Action 完整管理器，负责 DeepSeek API 全局配置、Action 卡片列表、新建/编辑/删除/排序、输入文件源路径绑定和 Prompt 变量高亮编辑；Action 快捷键与选择文件快捷键都使用点击录制，Esc 取消，Backspace/Delete 清空；该窗口可由设置页签、托盘右键菜单的 `AI Actions` 或全局选择文件快捷键打开。
 
 当前设置窗口默认 `800 × 600`，采用无边框 WPF 壳，窗口内部按 Header、Body、Footer 三段式组织。Header 包含紧凑品牌区、可点击录制的快捷键键帽和五个文字页签；页签与应用图标保持更舒展的垂直间距，外层壳体不再使用会被透明窗口裁切成黑框的外边距阴影。Body 使用圆角分组卡片承载常规、翻译、外观、隐私和高级诊断；Footer 固定放置保存和状态反馈。设置窗口文字层级以 Regular/Medium 为主，不使用 Bold/SemiBold 作为常规 UI 字重。窗口打开时执行淡入与缩放动效；为保证透明无边框窗口四角干净，设置窗不再启用矩形 DWM/Mica 背景，而由本地壳体背景和运行时圆角裁剪承载视觉外观。虽然窗口视觉上保持无边框，但边缘和四角通过 `WM_NCHITTEST` 恢复原生拖拽缩放手感，用户调整后的宽高会自动写入设置并作为下次默认尺寸。
 
@@ -137,11 +159,11 @@ ClipboardSelectionProvider 读取当前剪贴板文本
 
 ### Tray
 
-`TrayService` 维护系统托盘图标、菜单和启动通知。左键单击托盘图标会直接打开设置窗口；右键菜单保留暂停/恢复、翻译剪贴板、设置和退出，不再显示历史入口；启动时右下角通知支持点击打开设置窗口。通知点击后的设置窗会执行一次显式抬前流程：必要时恢复窗口、临时置顶、激活并聚焦，再恢复普通层级，避免被其他应用窗口盖住。托盘是用户无需打开主窗口即可控制应用的主要入口。
+`TrayService` 维护系统托盘图标、菜单和启动通知。左键单击托盘图标会直接打开设置窗口；右键菜单保留暂停/恢复、翻译剪贴板、设置、AI Actions 和退出，不再显示历史入口；启动时右下角通知支持点击打开设置窗口。通知点击后的设置窗会执行一次显式抬前流程：必要时恢复窗口、临时置顶、激活并聚焦，再恢复普通层级，避免被其他应用窗口盖住。托盘是用户无需打开主窗口即可控制应用的主要入口。
 
 ### Input
 
-`HotkeyService` 负责注册全局快捷键。`KeyboardHookService` 和 `MouseHookService` 负责低级输入监听，用于关闭被动 UI、捕捉 Esc、识别鼠标选择手势。`KeyboardHookService` 会缓存 Ctrl/Alt 的按下与释放状态及低级 hook 消息时间，供鼠标起手判定读取，避免只靠瞬时 `GetAsyncKeyState` 采样导致拖选起手丢键；`MouseHookService` 只在鼠标左键按下时做一次起手判定，普通拖选不会进入后续移动/释放阶段的补判。单独按下或松开 Ctrl/Alt 不再作为关闭被动 UI 的用户活动。启动阶段会等通知窗口显示后再注册触发器，避免低级 hook 在 UI 线程初始化繁忙时影响鼠标流畅度。Hook 内不做重计算，只转发事件给协调层。
+`HotkeyService` 负责注册内置翻译全局快捷键；`AIActionHotkeyManager` 负责根据 AI Action 配置动态注册多个 Action 快捷键，并在暂停/恢复时与内置触发器一起启停。`KeyboardHookService` 和 `MouseHookService` 负责低级输入监听，用于关闭被动 UI、捕捉 Esc、识别鼠标选择手势。`KeyboardHookService` 会缓存 Ctrl/Alt 的按下与释放状态及低级 hook 消息时间，供鼠标起手判定读取，避免只靠瞬时 `GetAsyncKeyState` 采样导致拖选起手丢键；`MouseHookService` 只在鼠标左键按下时做一次起手判定，普通拖选不会进入后续移动/释放阶段的补判。单独按下或松开 Ctrl/Alt 不再作为关闭被动 UI 的用户活动。启动阶段会等通知窗口显示后再注册触发器，避免低级 hook 在 UI 线程初始化繁忙时影响鼠标流畅度。Hook 内不做重计算，只转发事件给协调层。
 
 ### Selection
 
@@ -179,12 +201,26 @@ ClipboardSelectionProvider 读取当前剪贴板文本
 
 错误处理覆盖缺少 API Key、鉴权失败、余额或额度不足、限流、无效请求、网络错误、超时、取消和空响应。
 
+### AIAction
+
+AI Action 模块把 Hermes 扩展为可配置的 AI 快捷操作工具，同时保持翻译主流程不变。
+
+- `AIActionConfigService` 读写 `%LOCALAPPDATA%\Hermes\AIAction\actions.json` 和 `ai_config.json`，启动时加载配置，Action 新建、编辑、删除、排序后实时写回 JSON。AI Action 默认模型为 `deepseek-v4-flash`；旧 schema 中仍为旧默认 `deepseek-chat` 的配置会迁移到新默认。
+- `AIActionSecretStorageService` 使用 Windows DPAPI 将 AI Action API Key 加密保存到 `%LOCALAPPDATA%\Hermes\AIAction\ai_key.dat`，Action 自身不保存密钥；如果 AI Action 独立 Key 为空，`DeepSeekProvider` 只复用 Hermes 已保存 API Key 作为密钥兜底，但仍使用 AI Action 自己的 Base URL、Model、Prompt 和执行器，不进入原翻译路由。
+- `AIActionHotkeyManager` 使用 Win32 `RegisterHotKey` 为多个 Action 动态注册执行快捷键，并为 `ChooseFileHotkey` 注册单独的全局选择文件快捷键；空快捷键不会注册，冲突注册失败时写入日志。
+- `PromptTemplateResolver` 支持 `$text$`、`$clipboard$`、`$file_input$`、`$file_append$`、`$file_overwrite$`。写回控制变量不会发送给 AI；同时出现 append/overwrite 时以 overwrite 为准。
+- `ContextFileService` 选择 `.txt` / `.md` 输入文件时保存源文件绝对路径，不再复制到 `%LOCALAPPDATA%\Hermes\AIAction\Context\`，因此不会因重名生成 `-1` 副本；执行时以 UTF-8 直接读取源文件。旧配置中只保存文件名的条目仍按旧 `%LOCALAPPDATA%\Hermes\AIAction\Context\` 路径兼容读取。
+- `ContextWriteService` 根据控制变量把 AI 结果追加或覆盖写回绑定源文件；旧文件名配置继续写回旧 Context 目录；执行写回前不再弹出确认框。
+- `DeepSeekProvider` 使用 OpenAI-compatible `POST /chat/completions` 调用，默认 Base URL 为 `https://api.deepseek.com`，默认模型 `deepseek-v4-flash`。
+- `AIActionExecutor` 复用 `SelectionOrchestrator` 读取当前选区/剪贴板，复用 `OverlayManager` 和 `TranslationPopupWindow` 显示加载、错误和结果。
+
 ### Settings
 
 设置模块负责本地配置和密钥存储。
 
 - `SettingsService` 读写 `%LOCALAPPDATA%\Hermes\settings.json`。
-- `DpapiSecretStorageService` 使用 Windows DPAPI 加密保存 API Key 到 `secrets.dat`。
+- `DpapiSecretStorageService` 使用 Windows DPAPI 加密保存翻译/解释 API Key 到 `secrets.dat`。
+- AI Action 的 API 配置与密钥独立存放在 `%LOCALAPPDATA%\Hermes\AIAction\`，避免 DeepSeek Key 覆盖翻译通道 Key。
 - `StartupRegistrationService` 管理开机启动注册。
 - `AppSettings` 定义 API、翻译、触发、UI、隐私和启动设置。默认 Provider 为 `Transmart`（`https://transmart.qq.com/api`，`normal`），翻译设置包含可编辑系统 Prompt 和“解释个性化偏好”。
 
@@ -202,7 +238,7 @@ ClipboardSelectionProvider 读取当前剪贴板文本
 
 ### Tests
 
-`tests/Hermes.Tests` 是轻量控制台测试套件，覆盖设置、脱敏、选区校验、选择候选、UI Automation 预读失败/超时手势兜底、被动路径敏感控件检查时间盒、快捷键解析、鼠标 Ctrl/Alt 起手触发门控、启动触发器延迟注册、启动通知点击设置、设置窗口选项文案和值映射、设置/弹窗边缘缩放与尺寸持久化约束、外观页悬浮按钮五点尺寸选择器对齐与主题预览、外观页浮窗字号五点选择器、设置/弹窗滚动条主题样式、通知点击后的设置窗抬前逻辑、历史/诊断清理、OpenAI 与 Transmart 响应解析、加载态通道显示、悬浮按钮清晰度和去重约束、翻译卡片拖拽/外部点击关闭入口、多卡片事件隔离约束、弹窗 Markdown 渲染回归和 UI 字重约束等逻辑。WPF 可视交互仍需要真实应用试用补充验证。
+`tests/Hermes.Tests` 是轻量控制台测试套件，覆盖 AI Action Prompt 解析、DeepSeek URL/响应解析、设置、脱敏、选区校验、选择候选、UI Automation 预读失败/超时手势兜底、被动路径敏感控件检查时间盒、快捷键解析、鼠标 Ctrl/Alt 起手触发门控、启动触发器延迟注册、启动通知点击设置、设置窗口选项文案和值映射、设置/弹窗边缘缩放与尺寸持久化约束、外观页悬浮按钮五点尺寸选择器对齐与主题预览、外观页浮窗字号五点选择器、设置/弹窗滚动条主题样式、通知点击后的设置窗抬前逻辑、历史/诊断清理、OpenAI 与 Transmart 响应解析、加载态通道显示、悬浮按钮清晰度和去重约束、翻译卡片拖拽/外部点击关闭入口、多卡片事件隔离约束、弹窗 Markdown 渲染回归和 UI 字重约束等逻辑。WPF 可视交互仍需要真实应用试用补充验证。
 
 ## 打包策略
 
@@ -325,6 +361,15 @@ Hermes 的用户数据保存在：
 
 | 日期 | 变更 | 影响范围 |
 | --- | --- | --- |
+| 2026-07-10 | 设置窗口 AI Action 标签页改名为 `AI 小工具`，说明文案改为中文，并新增“打开配置目录”按钮，直接打开 `%LOCALAPPDATA%\Hermes\AIAction\`。 | Shell / AIAction / Tests / Docs |
+| 2026-07-10 | AI Action 配置目录从 Roaming `%APPDATA%\Hermes\AIAction\` 调整为与 Hermes 主配置一致的 `%LOCALAPPDATA%\Hermes\AIAction\`，并在启动时迁移旧 Roaming 目录中缺失的配置、密钥和 Context 文件。 | AIAction / Shell / Tests / Docs |
+| 2026-07-10 | 修复 AI Action 保存 Action 时丢失源文件目录的问题：`AIActionConfigService.Normalize` 不再把 `InputFile` 裁剪成文件名，选择文件后的绝对路径会完整写入 `actions.json`，因此 `$file_overwrite$` 会覆盖用户选中的原文件。 | AIAction / Tests / Docs |
+| 2026-07-10 | AI Action 文件写回去掉覆盖前确认弹窗：`$file_append$` / `$file_overwrite$` 按 Prompt 控制变量直接写回绑定源文件，避免执行过程中被额外 MessageBox 打断。 | AIAction / Tests / Docs |
+| 2026-07-10 | AI Action 输入文件选择改为保存源文件绝对路径，不再复制到 Context 目录或为重名文件生成 `-1` 副本；`$file_input$` 直接读取源文件，`$file_append$` / `$file_overwrite$` 直接写回源文件，并保留旧 Context 文件名配置兼容。 | AIAction / Shell / Tests / Docs |
+| 2026-07-10 | 修正 AI Action 缺少独立 Key 时的执行体验：Provider 会在 AI Action Key 为空时复用 Hermes 已保存 API Key 作为密钥兜底，同时继续走 AI Action 自己的 DeepSeek/OpenAI-compatible Base URL、Model、Prompt 和结果写回链路，不进入原翻译功能。 | AIAction / App / Tests / Docs |
+| 2026-07-10 | AI Action 快捷键输入改为点击录制；新增可修改的全局 `Choose File Hotkey`，触发后打开 AI Actions 管理窗口并进入输入文件选择；默认模型改为 `deepseek-v4-flash`，并为旧默认配置增加迁移。 | AIAction / Shell / App / Tests / Docs |
+| 2026-07-10 | 将 AI Action 集成到设置窗口：新增 `AI Actions` 页签，展示配置目录、全局 AI 配置、Prompt 变量和写回规则，并从页签打开完整 Action 管理器；托盘 `AI Actions` 保留为快捷入口。 | Shell / AIAction / Tests / Docs |
+| 2026-07-10 | 参考 `docs\prompts\iishuu-ai-small-tool.md` 新增 AI Action Framework 第一阶段：独立 `%LOCALAPPDATA%\Hermes\AIAction\` 配置和 DPAPI 密钥、DeepSeek/OpenAI-compatible 调用、Prompt 变量解析、Context 文件导入/追加/覆盖、动态 Action 快捷键、托盘 `AI Actions` 管理窗口，并复用翻译卡片显示结果。 | AIAction / Shell / Tray / Input / Overlay / Tests / Docs |
 | 2026-05-26 | 建立根目录 `Design.md`，明确项目结构、核心流程、模块职责和文档同步规则。 | 文档维护 |
 | 2026-05-26 | 确定真实使用测试优先采用 `win-x64 self-contained` portable 文件夹包，输出到 `artifacts\publish\Hermes.Windows\manual-test\win-x64-self-contained\`。 | 打包发布 |
 | 2026-05-26 | 记录自包含 runtime packs 不可用时的临时 `win-x64 framework-dependent` 发布路径，用于当前开发机试用。 | 打包发布 |
@@ -410,3 +455,14 @@ Hermes 的用户数据保存在：
   - `正在翻译 (<OpenAI model>)...` when translation routes to OpenAI.
   - `正在解释 (<OpenAI model>)...` for explanation mode (always OpenAI).
 - Added regression tests for migration skip behavior and loading-state channel visibility.
+
+
+
+
+
+
+
+
+
+
+

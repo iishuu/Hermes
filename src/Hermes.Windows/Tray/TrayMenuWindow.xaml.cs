@@ -26,6 +26,8 @@ public partial class TrayMenuWindow : Window
 
     public event EventHandler? SettingsRequested;
 
+    public event EventHandler? AIActionSettingsRequested;
+
     public event EventHandler? ExitRequested;
 
     protected override void OnSourceInitialized(EventArgs e)
@@ -48,6 +50,8 @@ public partial class TrayMenuWindow : Window
     private void TranslateClipboard_Click(object sender, RoutedEventArgs e) => InvokeAndClose(TranslateClipboardRequested);
 
     private void Settings_Click(object sender, RoutedEventArgs e) => InvokeAndClose(SettingsRequested);
+
+    private void AIActionSettings_Click(object sender, RoutedEventArgs e) => InvokeAndClose(AIActionSettingsRequested);
 
     private void Exit_Click(object sender, RoutedEventArgs e) => InvokeAndClose(ExitRequested);
 
@@ -117,3 +121,4 @@ public partial class TrayMenuWindow : Window
         transform.BeginAnimation(ScaleTransform.ScaleYProperty, animation);
     }
 }
+

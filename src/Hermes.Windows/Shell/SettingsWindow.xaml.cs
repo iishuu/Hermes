@@ -1,8 +1,10 @@
+﻿using System.Diagnostics;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Interop;
 using System.Windows.Media;
 using System.Windows.Media.Animation;
+using Hermes.Windows.AIAction;
 using Hermes.Windows.History;
 using Hermes.Windows.Infrastructure;
 using Hermes.Windows.Input;
@@ -28,6 +30,7 @@ public partial class SettingsWindow : Window
     private readonly TranslationHistoryService _historyService;
     private readonly TriggerDiagnosticsService _triggerDiagnosticsService;
     private readonly AppLogger _logger;
+    private readonly Action? _aiActionSettingsRequested;
     private bool _isLoadingSettings;
     private bool _apiKeyVisible;
     private bool _isRecordingHotkey;
@@ -41,7 +44,8 @@ public partial class SettingsWindow : Window
         StartupRegistrationService startupRegistrationService,
         TranslationHistoryService historyService,
         TriggerDiagnosticsService triggerDiagnosticsService,
-        AppLogger logger)
+        AppLogger logger,
+        Action? aiActionSettingsRequested = null)
     {
         InitializeComponent();
         _settingsService = settingsService;
@@ -51,6 +55,7 @@ public partial class SettingsWindow : Window
         _historyService = historyService;
         _triggerDiagnosticsService = triggerDiagnosticsService;
         _logger = logger;
+        _aiActionSettingsRequested = aiActionSettingsRequested;
         _windowSizePersistTimer = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromMilliseconds(320) };
         _windowSizePersistTimer.Tick += (_, _) =>
         {
@@ -495,6 +500,29 @@ public partial class SettingsWindow : Window
     private void Close_Click(object sender, RoutedEventArgs e)
     {
         Close();
+    }
+
+    private void OpenAIActionSettings_Click(object sender, RoutedEventArgs e)
+    {
+        _aiActionSettingsRequested?.Invoke();
+    }
+
+    private void OpenAIActionConfigDirectory_Click(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            AIActionPaths.EnsureCreated();
+            Process.Start(new ProcessStartInfo
+            {
+                FileName = AIActionPaths.RootDirectory,
+                UseShellExecute = true
+            });
+        }
+        catch (Exception ex)
+        {
+            _logger.Error("Open AI Action config directory failed.", ex);
+            StatusText.Text = "无法打开 AI 小工具配置目录，请查看日志。";
+        }
     }
 
     private async void ApiKeyReveal_Click(object sender, RoutedEventArgs e)
@@ -1060,3 +1088,6 @@ public partial class SettingsWindow : Window
         Success
     }
 }
+
+
+
