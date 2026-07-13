@@ -248,6 +248,7 @@ AI Action 模块把 Hermes 扩展为可配置的 AI 快捷操作工具，同时�
 - `NuGet.Config` 使用 `.nuget\offline` 作为优先包源，并保留 `nuget.org` 作为在线包源。
 - `scripts\Use-HermesEnv.ps1` 统一设置 `DOTNET_CLI_HOME`、NuGet 缓存、scratch/cache 目录和可选代理，并确保 `.nuget\offline` 本地源目录存在；构建中间目录默认落在系统临时目录，避免受工作区删除限制影响。
 - `scripts\Restore-Hermes.ps1`、`scripts\Test-Hermes.ps1`、`scripts\Publish-Hermes.ps1` 和 `scripts\Package-HermesRelease.ps1` 是标准入口。
+- 根目录 `build_release.bat` 在 restore、Release build 和 publish 成功后，会把整个根目录 `release\`（包含顶层目录本身）压缩为同级 `release-package\Hermes-release.zip`，并生成 `Hermes-release.zip.sha256.txt`。`release-package\` 仅存放本地归档产物，由 Git 忽略。
 
 自包含发布需要以下 runtime packs 放在 `.nuget\offline`：
 
@@ -361,6 +362,7 @@ Hermes 的用户数据保存在：
 
 | 日期 | 变更 | 影响范围 |
 | --- | --- | --- |
+| 2026-07-13 | 扩展根目录 `build_release.bat`：publish 完成后将整个 `release\` 目录归档到同级 `release-package\`，并为 zip 生成 SHA256 文本；新产物目录不进入 Git。 | 开发环境 / 打包发布 / 仓库结构 |
 | 2026-07-13 | 将翻译卡片的关闭策略从“点击其他位置”改为“按 Esc”；鼠标外部活动仅清理划词按钮，Esc 显式关闭当前翻译卡片。 | App / Input / Overlay / Translation / Tests / Docs |
 | 2026-07-10 | 设置窗口 AI Action 标签页改名为 `AI 小工具`，说明文案改为中文，并新增“打开配置目录”按钮，直接打开 `%LOCALAPPDATA%\Hermes\AIAction\`。 | Shell / AIAction / Tests / Docs |
 | 2026-07-10 | AI Action 配置目录从 Roaming `%APPDATA%\Hermes\AIAction\` 调整为与 Hermes 主配置一致的 `%LOCALAPPDATA%\Hermes\AIAction\`，并在启动时迁移旧 Roaming 目录中缺失的配置、密钥和 Context 文件。 | AIAction / Shell / Tests / Docs |
