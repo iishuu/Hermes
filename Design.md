@@ -163,7 +163,7 @@ AI Action 与原翻译功能独立：翻译快捷键、划词按钮和 Transmart
 
 ### Input
 
-`HotkeyService` 负责注册内置翻译全局快捷键；`AIActionHotkeyManager` 负责根据 AI Action 配置动态注册多个 Action 快捷键，并在暂停/恢复时与内置触发器一起启停。`KeyboardHookService` 和 `MouseHookService` 负责低级输入监听，用于关闭被动 UI、捕捉 Esc、识别鼠标选择手势。`KeyboardHookService` 会缓存 Ctrl/Alt 的按下与释放状态及低级 hook 消息时间，供鼠标起手判定读取，避免只靠瞬时 `GetAsyncKeyState` 采样导致拖选起手丢键；`MouseHookService` 只在鼠标左键按下时做一次起手判定，普通拖选不会进入后续移动/释放阶段的补判。单独按下或松开 Ctrl/Alt 不再作为关闭被动 UI 的用户活动。启动阶段会等通知窗口显示后再注册触发器，避免低级 hook 在 UI 线程初始化繁忙时影响鼠标流畅度。Hook 内不做重计算，只转发事件给协调层。
+`HotkeyService` 负责注册内置翻译全局快捷键；`AIActionHotkeyManager` 负责根据 AI Action 配置动态注册多个 Action 快捷键，并在暂停/恢复时与内置触发器一起启停。`KeyboardHookService` 和 `MouseHookService` 负责低级输入监听，用于关闭被动 UI、捕捉 Esc、识别鼠标选择手势。Esc 作为翻译卡片的全局显式关闭动作；鼠标点击其他位置只清理被动划词按钮，不再关闭翻译卡片。`KeyboardHookService` 会缓存 Ctrl/Alt 的按下与释放状态及低级 hook 消息时间，供鼠标起手判定读取，避免只靠瞬时 `GetAsyncKeyState` 采样导致拖选起手丢键；`MouseHookService` 只在鼠标左键按下时做一次起手判定，普通拖选不会进入后续移动/释放阶段的补判。单独按下或松开 Ctrl/Alt 不再作为关闭被动 UI 的用户活动。启动阶段会等通知窗口显示后再注册触发器，避免低级 hook 在 UI 线程初始化繁忙时影响鼠标流畅度。Hook 内不做重计算，只转发事件给协调层。
 
 ### Selection
 
@@ -182,7 +182,7 @@ AI Action 与原翻译功能独立：翻译快捷键、划词按钮和 Transmart
 - `FloatingButtonWindow` 显示在按住 Ctrl/Alt 后开始拖选的轻量触发按钮。
 - `FloatingButtonWindow` 的浅色/深色图标内容同步自 `src/Hermes.Windows/Resources/Icons/FloatingButtonLight.svg` 和 `FloatingButtonDark.svg`，不再额外叠加实底边框；仓库根目录不再保留同名副本图标。按钮尺寸由 `UiSettings.FloatingButtonSize` 控制，五档分别映射命中区和图标层大小：超小 32/18、小 38/22、中 44/25、大 52/30、超大 60/36，点击热区会随图标尺寸一起缩放。
 - `FloatingButtonWindow` 支持手动高对比图标样式：`DarkBorderLightFill`（黑框白底图标）和 `LightBorderDarkFill`（白框黑底图标），并通过设置页外观项持久化，避免深色网页与浅色主题叠加时按钮不可辨。
-- `TranslationPopupWindow` 显示加载、流式译文、长耗时、成功、错误、复制、重试、固定和关闭状态；加载标题会显示实际运行通道（`Tencent` 或 OpenAI 模型名），并在流式 delta 与长耗时状态中继续保留该通道文案。成功完成且未固定时，鼠标点击浮窗外部会关闭卡片。翻译卡片同样保持无边框外观，并通过 `WM_NCHITTEST` 支持边缘和四角原生缩放；用户调整后的宽高会自动保存为下一张卡片默认尺寸。卡片正文滚动条使用与设置窗口一致的细轨道/圆角滑块样式，并通过 `Brush.ScrollThumb` / `Brush.ScrollThumbHover` 随浅色、深色主题切换颜色。
+- `TranslationPopupWindow` 显示加载、流式译文、长耗时、成功、错误、复制、重试、固定和关闭状态；加载标题会显示实际运行通道（`Tencent` 或 OpenAI 模型名），并在流式 delta 与长耗时状态中继续保留该通道文案。翻译卡片不再因点击其他位置而关闭，用户可按 Esc 关闭当前卡片。翻译卡片同样保持无边框外观，并通过 `WM_NCHITTEST` 支持边缘和四角原生缩放；用户调整后的宽高会自动保存为下一张卡片默认尺寸。卡片正文滚动条使用与设置窗口一致的细轨道/圆角滑块样式，并通过 `Brush.ScrollThumb` / `Brush.ScrollThumbHover` 随浅色、深色主题切换颜色。
 - `TranslationPopupWindow` 的正文渲染统一由 `PopupMarkdownRenderer` 处理，翻译和解释（含流式 delta）共用同一条 Markdown 渲染链路，支持标题、列表、引用、代码块、行内代码、强调和链接文本，并对未闭合标记按普通文本降级显示，避免流式阶段卡死或错乱。
 - `TranslationPopupWindow` 顶部使用应用图标作为品牌标识；用户可以从卡片背景、正文和原文区域等非交互表面拖动卡片，按钮、开关、滚动条等交互控件不会触发拖拽。
 - `OverlayPositionService` 负责多屏幕边界内的位置约束。
@@ -361,6 +361,7 @@ Hermes 的用户数据保存在：
 
 | 日期 | 变更 | 影响范围 |
 | --- | --- | --- |
+| 2026-07-13 | 将翻译卡片的关闭策略从“点击其他位置”改为“按 Esc”；鼠标外部活动仅清理划词按钮，Esc 显式关闭当前翻译卡片。 | App / Input / Overlay / Translation / Tests / Docs |
 | 2026-07-10 | 设置窗口 AI Action 标签页改名为 `AI 小工具`，说明文案改为中文，并新增“打开配置目录”按钮，直接打开 `%LOCALAPPDATA%\Hermes\AIAction\`。 | Shell / AIAction / Tests / Docs |
 | 2026-07-10 | AI Action 配置目录从 Roaming `%APPDATA%\Hermes\AIAction\` 调整为与 Hermes 主配置一致的 `%LOCALAPPDATA%\Hermes\AIAction\`，并在启动时迁移旧 Roaming 目录中缺失的配置、密钥和 Context 文件。 | AIAction / Shell / Tests / Docs |
 | 2026-07-10 | 修复 AI Action 保存 Action 时丢失源文件目录的问题：`AIActionConfigService.Normalize` 不再把 `InputFile` 裁剪成文件名，选择文件后的绝对路径会完整写入 `actions.json`，因此 `$file_overwrite$` 会覆盖用户选中的原文件。 | AIAction / Tests / Docs |

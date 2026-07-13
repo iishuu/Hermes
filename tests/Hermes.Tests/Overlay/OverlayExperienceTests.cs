@@ -19,7 +19,7 @@ public static class OverlayExperienceTests
         suite.Add("translation popup applies configured font size to body and source preview", TranslationPopupAppliesConfiguredFontSizeToBodyAndSourcePreview);
         suite.Add("translation popup preserves loading channel while streaming", TranslationPopupPreservesLoadingChannelWhileStreaming);
         suite.Add("translation popup keeps readable chinese labels", TranslationPopupKeepsReadableChineseLabels);
-        suite.Add("completed unpinned popup closes after outside pointer activity", CompletedUnpinnedPopupClosesAfterOutsidePointerActivity);
+        suite.Add("translation popup closes on escape instead of outside pointer activity", TranslationPopupClosesOnEscapeInsteadOfOutsidePointerActivity);
         suite.Add("overlay manager tracks multiple popups", OverlayManagerTracksMultiplePopups);
         suite.Add("overlay manager keeps configured popup width", OverlayManagerKeepsConfiguredPopupWidth);
         suite.Add("overlay manager closes orphan floating buttons before showing a new one", OverlayManagerClosesOrphanFloatingButtons);
@@ -186,17 +186,16 @@ public static class OverlayExperienceTests
         TestAssert.False(popupXaml.Contains("穿透网络以太层", StringComparison.Ordinal));
     }
 
-    private static void CompletedUnpinnedPopupClosesAfterOutsidePointerActivity()
+    private static void TranslationPopupClosesOnEscapeInsteadOfOutsidePointerActivity()
     {
         var app = File.ReadAllText(FindRepoFile("src/Hermes.Windows/App.xaml.cs"));
         var coordinator = File.ReadAllText(FindRepoFile("src/Hermes.Windows/Translation/TranslationCoordinator.cs"));
         var manager = File.ReadAllText(FindRepoFile("src/Hermes.Windows/Overlay/OverlayManager.cs"));
-        var popup = File.ReadAllText(FindRepoFile("src/Hermes.Windows/Overlay/TranslationPopupWindow.xaml.cs"));
-
-        TestAssert.True(app.Contains("ClosePassiveUiAfterPointerActivity", StringComparison.Ordinal));
-        TestAssert.True(coordinator.Contains("CloseCompletedUnpinnedPopup", StringComparison.Ordinal));
-        TestAssert.True(manager.Contains("HasCompletedTranslation: true", StringComparison.Ordinal));
-        TestAssert.True(popup.Contains("public bool HasCompletedTranslation", StringComparison.Ordinal));
+        TestAssert.True(app.Contains("EscapePressed += (_, _) => _translationCoordinator?.CloseTranslationUiOnEscape()", StringComparison.Ordinal));
+        TestAssert.True(coordinator.Contains("public void CloseTranslationUiOnEscape()", StringComparison.Ordinal));
+        TestAssert.True(coordinator.Contains("_overlayManager.CloseLatestPopup();", StringComparison.Ordinal));
+        TestAssert.False(coordinator.Contains("ClosePassiveUiAfterPointerActivity()\n    {\n        CancelPendingPassiveButton();\n        _overlayManager.CloseFloatingButton();\n        _overlayManager.CloseCompletedUnpinnedPopup();", StringComparison.Ordinal));
+        TestAssert.True(manager.Contains("public void CloseLatestPopup()", StringComparison.Ordinal));
     }
 
     private static void OverlayManagerTracksMultiplePopups()

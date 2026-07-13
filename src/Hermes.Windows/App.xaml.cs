@@ -163,7 +163,7 @@ public partial class App : System.Windows.Application
 
         _keyboardHookService = new KeyboardHookService(_logger);
         _keyboardHookService.UserActivity += (_, _) => _translationCoordinator?.ClosePassiveUi();
-        _keyboardHookService.EscapePressed += (_, _) => _translationCoordinator?.ClosePassiveUi();
+        _keyboardHookService.EscapePressed += (_, _) => _translationCoordinator?.CloseTranslationUiOnEscape();
 
         _mouseHookService = new MouseHookService(_logger);
         _mouseHookService.UserActivity += (_, activity) =>

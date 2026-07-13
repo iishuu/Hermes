@@ -27,7 +27,6 @@ Hermes 是一个 Windows 全局 AI 划词翻译助手。选中英文内容后，
 - 支持浅色、深色和跟随系统主题。
 - 默认不保存翻译历史，隐私优先。
 
-
 ## 下载和运行
 
 正式对外发布时，请在 GitHub Releases 中下载：
@@ -141,7 +140,6 @@ artifacts\release\v0.2.3\
 - `Design.md`：项目结构、核心流程、模块职责、打包策略和变更记录。
 - `docs/release-notes/`：GitHub Release 文案草稿。
 - `docs/prompts/`：README 头图等视觉素材提示词。
-- `docs/iishuu-ai-small-tool.md`: ai小工具使用说明
 
 ## Provider Notes (2026-05-29)
 
@@ -155,35 +153,6 @@ artifacts\release\v0.2.3\
   - `正在翻译 (<OpenAI model>)...` for OpenAI translation.
 
 
-## Fork Notice
-
-This repository is a fork of:
-
-https://github.com/KiRinXC/Hermes
-
-This fork adds custom AI tools and related extensions while keeping the original Hermes translation functionality unchanged.
-
-
-## Build
-
-Requirements:
-
-- Visual Studio 2022
-- .NET SDK 10.0.300
-
-
-A release build script is provided:
-
-`build_release.bat`
-
-
-The script will:
-
-1. Clean previous release output.
-2. Restore dependencies.
-3. Build the project in Release mode.
-4. Publish output to: `release\`  
-The generated files in `release\` can be used as the standalone build output.
 
 
 
