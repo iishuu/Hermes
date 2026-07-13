@@ -159,7 +159,13 @@ public sealed class TranslationCoordinator
     {
         CancelPendingPassiveButton();
         _overlayManager.CloseFloatingButton();
-        _overlayManager.CloseCompletedUnpinnedPopup();
+    }
+
+    public void CloseTranslationUiOnEscape()
+    {
+        CancelPendingPassiveButton();
+        _overlayManager.CloseFloatingButton();
+        _overlayManager.CloseLatestPopup();
     }
 
     public void CloseAll()

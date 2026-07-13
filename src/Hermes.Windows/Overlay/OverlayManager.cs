@@ -122,13 +122,15 @@ public sealed class OverlayManager
         }
     }
 
-    public void CloseCompletedUnpinnedPopup()
+    public void CloseLatestPopup()
     {
-        if (_latestPopup is { IsPinned: false, HasCompletedTranslation: true } popup)
+        if (_latestPopup is not { } popup)
         {
-            UntrackPopup(popup);
-            popup.CloseWithFade();
+            return;
         }
+
+        UntrackPopup(popup);
+        popup.CloseWithFade();
     }
 
     public void CloseAll()
